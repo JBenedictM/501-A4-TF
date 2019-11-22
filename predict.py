@@ -3,35 +3,57 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 import pyscreenshot as ImageGrab
+import os
 
 def main():
      class_names = check_args()
-     print(f"--Load Model {sys.argv[2]}--")
+     
+     print("--Load Model {%s}--" %sys.argv[2])
      #Load the model that should be in sys.argv[2]
-     model = None
-     print(f"--Load Image {sys.argv[3]}--")
-     img = plt.imread(sys.argv[3])
-     if np.amax(img.flatten()) > 1:
-          img = img/255
-     img = 1 - img
-     print(f"--Predict as Class {sys.argv[4]}--")
-     predict(model, class_names, img, int(sys.argv[4]))
+     loaded_model = tf.keras.models.load_model(sys.argv[2])
+     loaded_model.summary()
+     
+     print("--Load Folder {%s}--" %sys.argv[3])
+     imgs = os.listdir(sys.argv[3])
+     for img_filename in imgs:
+          actual_path = sys.argv[3] + img_filename
+          print("--Test Image {%s}--" %actual_path)
+          # open image source folder
+          img = plt.imread(actual_path)
+          #print(img)
+          
+          if np.amax(img.flatten()) > 1:
+               print("normalizing_data")
+               img = img/255
+
+          img = 1 - img
+          # parse image name to get actual value
+          img_name_parsed = img_filename.split("_")
+          true_label = -1
+          for word in img_name_parsed:
+               if (word[0] == "a"):
+                    true_label = int(word[2])
+                    break
+               
+          print("--Predict as Class {%s}--" %(class_names[true_label]))
+          
+          predict(loaded_model, class_names, img, true_label)
+          #break
 
 def predict(model, class_names, img, true_label):
     img = np.array([img])
+    img2 = img.reshape(img.shape[0], img.shape[1], img.shape[2], 1)
+
     #Replace these two lines with code to make a prediction
-    prediction = [1/10,1/10,1/10,1/10,1/10,1/10,1/10,1/10,1/10,1/10]
+    prediction = model.predict(img2)[0]
     #Determine what the predicted label is
-    predicted_label = 0
+    predicted_label = np.argmax(prediction)
     plot(class_names, prediction, true_label, predicted_label, img[0])
     plt.show()
 
 def check_args():
-     if(len(sys.argv) == 1):
-         print("No arguments so using defaults")
-         sys.argv = ["predict.py", "MNIST", "MNIST.h5", "image.png", input("Predict the class of image.png(index):")]
-     if(len(sys.argv) != 5):
-          print("Usage python predict.py <MNIST,notMNIST> <model.h5> <image.png> <prediction class index>")
+     if(len(sys.argv) != 4):
+          print("Usage python predict.py <MNIST,notMNIST> <model.h5> <folder path of images>")
           sys.exit(1)
      if sys.argv[1] == "MNIST":
           print("--Dataset MNIST--")
@@ -45,22 +67,18 @@ def check_args():
      if sys.argv[2][-3:] != ".h5":
           print(f"{sys.argv[2]} is not a h5 extension")
           sys.exit(3)
-     if sys.argv[3][-4:] != ".png":
-          print(f"{sys.argv[3]} is not a png extension")
+     if not os.path.exists(sys.argv[3]):
+          print(f"{sys.argv[3]} is not a valid folder")
           sys.exit(3)
-     img = plt.imread(sys.argv[3])
-     if len(img.shape) != 2:
-          print("Image is not grey scale!")
-          sys.exit(4)
-     if img.shape != (28,28):
-          print("Image is not 28 by 28!")
-          sys.exit(4)
-     if not sys.argv[4].isdigit():
-          print(f"{sys.argv[4]} is not an integer (0-9)")
-          sys.exit(3)
-     if int(sys.argv[4]) < 0 or int(sys.argv[4]) > 9 :
-          print(f"{sys.argv[4]} is not an integer (0-9)")
-          sys.exit(3)
+          
+     #img = plt.imread(sys.argv[3])
+     #if len(img.shape) != 2:
+     #     print("Image is not grey scale!")
+     #     sys.exit(4)
+     #if img.shape != (28,28):
+     #     print("Image is not 28 by 28!")
+     #     sys.exit(4)
+     
      return class_names
 
 def plot(class_names, prediction, true_label, predicted_label, img):
