@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tkinter import *
 import pyscreenshot as ImageGrab
+from time import gmtime, strftime 
 
 def main():
      class_names = check_args()
@@ -17,16 +18,18 @@ def predict(model, class_names, img, true_label):
     img = np.array([img])
     img2 = img.reshape(img.shape[0], img.shape[1], img.shape[2], 1)
     #img = 
-    print(img2.shape)
+    #print(img2.shape)
     #img = img.reshape(img.shape[0], img.shape[1], img.shape[2], 1)
     #load the model
     loaded_model = tf.keras.models.load_model(model)
     loaded_model.summary()
     prediction = loaded_model.predict(img2)[0]
     #Determine what the predicted label is
-    predict_prob, predicted_label = min((val, idx) for (idx, val) in enumerate(prediction))
+    predicted_label = np.argmax(prediction)
     plot(class_names, prediction, true_label, predicted_label, img[0])
     plt.show()
+
+    return predicted_label
 
 def check_args():
      if(len(sys.argv) == 1):
@@ -132,7 +135,18 @@ def draw(model, class_names):
         if(np.amax(array.flatten()) > 1):
             array = array / 255
         array = 1 - array
-        predict(model, class_names, array, value)
+        pred_label = predict(model, class_names, array, value)
+        #print("Actual %d ; Predicted %d" %(value, pred_label))
+
+        #print("Before " + str(np.array(grabbed)))
+        #print("After " + str(array))
+        # save photo if prediction is incorrect
+        if (pred_label != value):
+             base_path = "./misclassified_imgs/"
+             cur_time = strftime("%H:%M:%S", gmtime())
+             misclassified_img = base_path + cur_time + "_" + "a:" + str(value) + "_" + "p:" + str(pred_label) + ".png"
+             grabbed.save(misclassified_img)
+        
     root.mainloop()
 
 if __name__ == "__main__":
